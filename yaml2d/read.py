@@ -1,32 +1,25 @@
-FIRST_CHAR2TYPES = {
+from ast import literal_eval
 
-    '[': list,
-    '"': str,
-    "'": str,
-}
+if __name__ == "__main__":
+    from common import Entry
+else:
+    from .common import Entry
 
-LIST_CAST_TYPES = {
-    (int, float): float,
-    (float, int): float
-}
-
-
-def _ylist_type_cast(old_types, new_types):
-    def c(fromto):
-        from_type, to_type = fromto
-        if from_type == to_type:
-            return from_type
-        else:
-            new_type =  LIST_CAST_TYPES.get(fromto, False)
-            if not new_type:
-                raise Exception(f'List type error, tyring to cast {from_type} to {to_type}')
-            return new_type
-    
-    return map(c, zip(old_types.values(), new_types.values()))
 
 class Read():
-    def __init__(self, backend, is_onelist=False, tgt_parent=None):
-        self.backend = backend
+    FIRST_CHAR2TYPES = {
+        '[': list,
+        '"': str,
+        "'": str,
+    }
+
+    LIST_CAST_TYPES = {
+        (int, float): float,
+        (float, int): float
+    }
+
+
+    def __init__(self, is_onelist=False, tgt_parent=None):
         self.is_onelist = is_onelist
         self.tgt_parent = tgt_parent
         
@@ -39,20 +32,46 @@ class Read():
         self.all_types = dict()
         self.list_counter = 0
 
-        #line level 
+        #line state
         self.key = None
         self.value = None
         self.is_parent = False
         self.is_child = False
         self.is_minus = False
         self.is_obj_parsing_done = False
+        self.is_parent_value = False
+        self.is_obj_parsing = False
+        self.is_2ndimen_parsing = False
     
+    @classmethod
+    def _ylist_type_cast(cls, old_types, new_types):
+        def c(fromto):
+            from_type, to_type = fromto
+            if from_type == to_type:
+                return from_type
+            else:
+                new_type =  cls.LIST_CAST_TYPES.get(fromto, False)
+                if not new_type:
+                    raise Exception(f'List type error, tyring to cast {from_type} to {to_type}')
+                return new_type
+        
+        return map(c, zip(old_types.values(), new_types.values()))
+
+    @classmethod
+    def infer_type(cls, value):
+        ytype = cls.FIRST_CHAR2TYPES.get(value[0], False)
+        if not ytype:
+            ytype = float if '.' in value else int
+
     def _reset(self):
         #reset and skip
         if self.is_parent:
             if self.is_onelist and self.list_counter:
                 raise Exception("You specified a one list('-') yaml2d file but a key was found after parsing the list")
-            self.current_parent = self.key
+            if self.is_parent_value:
+                self.current_parent = None
+            else:
+                self.current_parent = self.key
             self.list_counter = 0
             
         if self.is_obj_parsing_done:
@@ -72,9 +91,22 @@ class Read():
 
         key, value = line.strip().split(':', 1)
         self.key, self.value = key.strip(), value.strip()
+        
+        self.is_parent_value = self.is_parent and self.value
 
         self.is_minus = key[0] == '-'
         self.is_obj_parsing_done = (self.is_parent or self.is_minus) and bool(self.yaml_obj)
+        
+        #states
+        if self.is_child:
+            self.is_obj_parsing = True
+        if self.is_parent:
+            self.is_obj_parsing = False
+
+        if self.is_obj_parsing:
+            self.is_2ndimen_parsing = True
+        if self.is_parent:
+            self.is_2ndimen_parsing = False
         
         
     def parsing_obj(self):
@@ -83,58 +115,127 @@ class Read():
             self.list_counter += 1
             self.key = self.key[1:].strip()
         self.yaml_obj[self.key] = self.value
-        ytype = FIRST_CHAR2TYPES.get(self.value[0], False)
-        if not ytype:
-            ytype = float if '.' in self.value else int
+        ytype = self.infer_type(self.value)        
         self.yaml_obj_types[self.key] = ytype
 
-    def _backend(self, is_last):
+
+    def read_obj(self):
         #write previous object to the self.backend if done parsing
-        if self.is_obj_parsing_done:
-            if self.list_counter and self.current_parent in self.all_types:
-                new_obj_types = self.all_types[self.current_parent]
-                new_obj_types = _ylist_type_cast(self.all_types[self.current_parent], self.yaml_obj_types)
-                self.yaml_obj_types = dict(zip(self.yaml_obj_types.keys(), new_obj_types))
-            self.all_types[self.current_parent] = self.yaml_obj_types
-            self.out = self.backend(self.out, False, self.current_parent, self.yaml_obj, self.list_counter, self.all_types)
-            if is_last:
-                self.out = self.backend(self.out, True, None, None, None, self.all_types)
-
-    def read(self, lines):
-        for line in lines:
-            self.process_line(line)
-            self._backend(False)
-            self._reset()
-            if self.is_child:
-                self.parsing_obj()
-        self.is_obj_parsing_done = True
-        self._backend(True)
-        return self.out
-
-    def read(self, lines):
-        for line in lines:
-            self.process_line(line)
-            self._backend(False)
-            self._reset()
-            if self.is_child:
-                self.parsing_obj()
-        self.is_obj_parsing_done = True
-        self._backend(True)
-        return self.out
+        if self.list_counter and self.current_parent in self.all_types:
+            new_obj_types = self.all_types[self.current_parent]
+            new_obj_types = self._ylist_type_cast(self.all_types[self.current_parent], self.yaml_obj_types)
+            self.yaml_obj_types = dict(zip(self.yaml_obj_types.keys(), new_obj_types))
+        self.all_types[self.current_parent] = self.yaml_obj_types
+        return True
 
 
     def read_generator(self, lines):
         for line in lines:
             self.process_line(line)
-            self._backend(False)
-            yield self.out
+            if self.is_obj_parsing_done:
+                self.read_obj()
+                yield Entry(
+                    parent=self.current_parent,
+                    obj=self.yaml_obj,
+                    ytype=self.yaml_obj_types,
+                    is_ylist= bool(self.list_counter),
+                    is_parent_value= False,
+                    is_last=False
+                )
+            if self.is_parent_value:
+                yield Entry(
+                    parent= self.key,
+                    obj=self.value,
+                    ytype= self.infer_type(self.value),
+                    is_parent_value= True,
+                    is_ylist=False,
+                    is_last=False
+                )
             self._reset()
-            if self.is_child:
+            if self.is_obj_parsing:
                 self.parsing_obj()
-        self.is_obj_parsing_done = True
-        self._backend(True)
-        yield self.out
+        if self.is_obj_parsing:
+            self.read_obj()
+            yield Entry(
+                obj=self.yaml_obj,
+                ytype=self.yaml_obj_types,
+                is_ylist= bool(self.list_counter),
+                is_parent_value= False,
+                is_last=False
+            )
+            yield Entry(is_last=True)
+        
 
+def _python_eval(value):
+    return literal_eval(value)
+
+
+def read_onelist_meta(lines):
+    read = Read(is_onelist=False, tgt_parent=None)
+    out = {}
+    for entry in read.read_generator(lines):
+        if entry.is_ylist:
+            return out
+        if entry.is_parent_value:
+            out[entry.parent] = _python_eval(entry.obj)
+        else:
+            out[entry.parent] = {k: _python_eval(v) for k, v in entry.obj.items()}
+                 
+
+def read_onelist_generator(lines, transform=None):
+    read = Read(is_onelist=False, tgt_parent=None)
+    def gen():
+        for entry in read.read_generator(lines):
+            if not entry.is_ylist:
+                continue
+            tmp = {k: _python_eval(v) for k, v in entry.obj.items()}
+            if transform:
+                tmp = transform(tmp)
+            yield tmp
+    return gen()
+
+
+#def read_onelist_dataframe(lines, transform=None):
+#    read = Read(is_onelist=False, tgt_parent=None)
+#    for entry in read.read_generator(lines):
+#        if not entry.is_ylist:
+#            continue
+#        tmp = {k: _python_eval(v) for k, v in entry.value.items()}
+#        if transform:
+#            tmp = transform(tmp)
+#        yield tmp
+#
 
 if __name__ == "__main__":
-    pass
+    yamlf = """
+config1:
+  key1: 'value1'
+  key2: 'value2'
+  key3: 'value3'
+
+config2:
+  keyA: 'valueA'
+  keyB: 'valueB'
+  keyC: 'valueC'
+
+data:
+  - name: 'John Doe'
+    age: 30
+    city: 'New York'
+  - name: 'Jane Smith'
+    age: 25
+    city: 'San Francisco'
+  - name: 'Bob Johnson'
+    age: 35
+    city: 'Chicago'
+  - name: 'Test'
+    age: 35.0
+    city: 'Chicago'
+    """
+
+    out = read_onelist_meta(yamlf.splitlines())
+    print(out)
+    gen = read_onelist_generator(yamlf.splitlines())
+
+    for item in gen:
+        print(item)
