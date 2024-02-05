@@ -1,9 +1,9 @@
 from ast import literal_eval
 
 if __name__ == "__main__":
-    from common import Entry
+    from common import Entry, NaN
 else:
-    from .common import Entry
+    from .common import Entry, NaN
 
 
 class Read():
@@ -47,6 +47,9 @@ class Read():
     def _ylist_type_cast(cls, old_types, new_types):
         def c(fromto):
             from_type, to_type = fromto
+            if to_type is type(None):
+                return from_type
+
             if from_type == to_type:
                 return from_type
             else:
@@ -61,7 +64,11 @@ class Read():
     def infer_type(cls, value):
         ytype = cls.FIRST_CHAR2TYPES.get(value[0], False)
         if not ytype:
-            ytype = float if '.' in value else int
+            if value == NaN:
+                ytype = type(None)
+            else:
+                ytype = float if '.' in value else int
+        return ytype
 
     def _reset(self):
         #reset and skip
@@ -167,6 +174,8 @@ class Read():
         
 
 def _python_eval(value):
+    if value == NaN:
+        return None
     return literal_eval(value)
 
 

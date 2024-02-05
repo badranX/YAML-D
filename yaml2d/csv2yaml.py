@@ -14,6 +14,7 @@ def df2yaml(df, inpath, outpath=None):
         outpath = inpath.with_suffix('.yaml')
 
     write_dataframe(outpath, df, name='data')
+    print(f"Done writing YAML file")
 
 
 def parse_arguments():
@@ -48,7 +49,6 @@ def main():
     try:
         df = pd.read_csv(args.file_path, sep=args.separator, header=0 if args.header else None,
                          usecols=args.columns, comment=args.comment)
-        print("Dataframe created successfully:")
         df2yaml(df, args.file_path, args.output)
     except FileNotFoundError:
         print(f"Error: File not found at {args.file_path}")
@@ -59,6 +59,3 @@ def main():
 # Run the main function
 if __name__ == "__main__":
     main()
-
-
-

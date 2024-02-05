@@ -1,14 +1,9 @@
 import itertools 
 
 if __name__ == "__main__":
-    from common import Entry
+    from common import Entry, TAB, MINUS_TAB, NL, SEP, NaN
 else:
-    from .common import Entry
-
-TAB = '  '
-MINUS_TAB = '- '
-NL = '\n'
-SEP = ': '
+    from .common import Entry, TAB, MINUS_TAB, NL, SEP, NaN
 
 
 class Write():

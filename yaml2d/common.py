@@ -1,11 +1,16 @@
 from numbers  import Number
 
+
 TAB = '  '
 MINUS_TAB = '- '
 NL = '\n'
 SEP = ': '
+NaN = 'null'
 
 def infer_repr(value):
+    str_value = repr(value).lower()
+    if str_value == 'nan' or str_value == 'none':
+        return NaN
     if isinstance(value, Number):
         return str(value)
     if isinstance(value, str):
