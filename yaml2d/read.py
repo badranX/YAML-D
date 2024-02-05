@@ -181,7 +181,7 @@ def _python_eval(value):
 
 
 def read_onelist_meta(lines):
-    read = Read(is_onelist=False, tgt_parent=None)
+    read = Read(is_onelist=True, tgt_parent=None)
     out = {}
     for entry in read.read_generator(lines):
         if entry.is_ylist:
@@ -193,7 +193,7 @@ def read_onelist_meta(lines):
                  
 
 def read_onelist_generator(lines, transform=None):
-    read = Read(is_onelist=False, tgt_parent=None)
+    read = Read(is_onelist=True, tgt_parent=None)
     def gen():
         for entry in read.read_generator(lines):
             if not entry.is_ylist:
@@ -206,7 +206,7 @@ def read_onelist_generator(lines, transform=None):
 
 
 def read_onelist_dataframe(lines):
-    read = Read(is_onelist=False, tgt_parent=None)
+    read = Read(is_onelist=True, tgt_parent=None)
     data = {}
     gen = read_onelist_generator(lines)
     for entrydict in gen:
