@@ -52,7 +52,7 @@ class Write():
                 self.write_entry(entry)
                 if len(self.buffer) > self.max_buffer_size:
                     f.write(self.buffer)
-                    f.buffer = ""
+                    self.buffer = ""
             f.write(self.buffer)
 
             
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     data = {'Name': ['Alice', 'Bob', 'Charlie'],
             'Age2': [25, 30, 22],
-            'Age': [25, 30, 22],
+            'Age':  [25, 30, 22],
             'City': ['New York', 'San Francisco', 'Los Angeles']}
 
     df = pd.DataFrame(data)

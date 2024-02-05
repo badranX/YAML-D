@@ -9,7 +9,8 @@ def infer_repr(value):
     if isinstance(value, Number):
         return str(value)
     if isinstance(value, str):
-        return '"{}"'.format(value)
+        #return '"{}"'.format(repr(value))
+        return repr(value)
     if isinstance(value, list):
         #TODO !!
         return str(value)
@@ -18,7 +19,7 @@ def infer_repr(value):
 class Entry():
     def __init__(self, parent=None, obj=None, ytype=None, is_ylist=None, is_parent_value=None, is_last=False):
         self.is_last = is_last
-        self.parent = parent
+        self.parent = str(parent)
         self.obj = obj
         self.ytype = ytype
         self.is_ylist = is_ylist
@@ -31,12 +32,13 @@ class Entry():
         this.parent = parent
         this.is_ylist = is_ylist
         this.obj = obj
-        this.obj = {k: infer_repr(v) for k,v in this.obj.items()}
+        this.obj = {str(k): infer_repr(v) for k,v in this.obj.items()}
         this.is_write_ready = True
         return this
         
     @classmethod
     def from_keyval(cls, key, val):
+        key = str(key)
         this = cls()
         this.parent= key
         this.is_ylist = False
