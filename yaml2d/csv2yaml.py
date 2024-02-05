@@ -14,7 +14,7 @@ def df2yaml(df, inpath, outpath=None):
         outpath = inpath.with_suffix('.yaml')
 
     write_dataframe(outpath, df, name='data')
-    print(f"Done writing YAML file")
+    print("Done writing YAML file: {}".format(outpath.name))
 
 
 def parse_arguments():
