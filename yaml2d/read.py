@@ -1,3 +1,4 @@
+import pandas as pd
 from ast import literal_eval
 
 if __name__ == "__main__":
@@ -203,6 +204,22 @@ def read_onelist_generator(lines, transform=None):
             yield tmp
     return gen()
 
+
+def read_onelist_dataframe(lines):
+    read = Read(is_onelist=False, tgt_parent=None)
+    data = {}
+    gen = read_onelist_generator(lines)
+    for entrydict in gen:
+        if not data:
+            data = {k:[v] for k,v in entrydict.items()}
+        else:
+            try:
+                for k, v in entrydict.items():
+                    data[k].append(v)
+            except KeyError as e:
+                raise Exception('Probably violated YAML (-)list must contain fixed features: ' + e.message) from e
+    df = pd.DataFrame(data)
+    return df
 
 #def read_onelist_dataframe(lines, transform=None):
 #    read = Read(is_onelist=False, tgt_parent=None)
