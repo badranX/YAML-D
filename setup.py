@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='yaml2d',
-    version='0.0.9',
+    version='0.0.10',
     author='Yahya Badran',
     author_email='techtweaking@gmail.com',
     description='parser of YAML2D, a tiny subset of YAML',

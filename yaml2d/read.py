@@ -221,16 +221,6 @@ def read_onelist_dataframe(lines):
     df = pd.DataFrame(data)
     return df
 
-#def read_onelist_dataframe(lines, transform=None):
-#    read = Read(is_onelist=False, tgt_parent=None)
-#    for entry in read.read_generator(lines):
-#        if not entry.is_ylist:
-#            continue
-#        tmp = {k: _python_eval(v) for k, v in entry.value.items()}
-#        if transform:
-#            tmp = transform(tmp)
-#        yield tmp
-#
 
 if __name__ == "__main__":
     yamlf = """
