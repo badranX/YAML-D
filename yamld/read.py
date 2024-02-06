@@ -191,6 +191,9 @@ def read_onelist_meta(lines):
         else:
             out[entry.parent] = {k: _python_eval(v) for k, v in entry.obj.items()}
                  
+def read_onelist_meta_from_file(path):
+    with open(path, 'r') as f:
+        return read_onelist_meta(f)
 
 def read_onelist_generator(lines, transform=None):
     read = Read(is_onelist=True, tgt_parent=None)
@@ -202,14 +205,17 @@ def read_onelist_generator(lines, transform=None):
             if transform:
                 tmp = transform(tmp)
             yield tmp
-    return gen()
+    return gen
 
+def read_onelist_generator_from_file(path):
+    with open(path, 'r') as f:
+        return read_onelist_generator(f)
 
 def read_onelist_dataframe(lines):
     read = Read(is_onelist=True, tgt_parent=None)
     data = {}
     gen = read_onelist_generator(lines)
-    for entrydict in gen:
+    for entrydict in gen():
         if not data:
             data = {k:[v] for k,v in entrydict.items()}
         else:
@@ -220,6 +226,10 @@ def read_onelist_dataframe(lines):
                 raise Exception('Probably violated YAML (-)list must contain fixed features: ' + e.message) from e
     df = pd.DataFrame(data)
     return df
+
+def read_onelist_dataframe_from_file(path):
+    with open(path, 'r') as f:
+        return read_onelist_dataframe(f)
 
 
 if __name__ == "__main__":
@@ -253,5 +263,5 @@ data:
     print(out)
     gen = read_onelist_generator(yamlf.splitlines())
 
-    for item in gen:
+    for item in gen():
         print(item)
