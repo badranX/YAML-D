@@ -76,8 +76,6 @@ class Read():
         if self.is_parent:
             if self.is_onelist and self.list_counter:
                 raise Exception("You specified a one list('-') yaml2d file but a key was found after parsing the list")
-            if self.is_parent_value:
-                self.current_parent = None
             else:
                 self.current_parent = self.key
             self.list_counter = 0
@@ -128,7 +126,6 @@ class Read():
 
 
     def read_obj(self):
-        #write previous object to the self.backend if done parsing
         if self.list_counter and self.current_parent in self.all_types:
             new_obj_types = self.all_types[self.current_parent]
             new_obj_types = self._ylist_type_cast(self.all_types[self.current_parent], self.yaml_obj_types)
@@ -190,6 +187,7 @@ def read_onelist_meta(lines):
             out[entry.parent] = _python_eval(entry.obj)
         else:
             out[entry.parent] = {k: _python_eval(v) for k, v in entry.obj.items()}
+    return out
                  
 def read_onelist_meta_from_file(path):
     with open(path, 'r') as f:
@@ -208,8 +206,12 @@ def read_onelist_generator(lines, transform=None):
     return gen
 
 def read_onelist_generator_from_file(path):
-    with open(path, 'r') as f:
-        return read_onelist_generator(f)
+    def gen():
+        with open(path, 'r') as f:
+            readgen =  read_onelist_generator(f)
+            for item in readgen():
+                yield item
+    return gen
 
 def read_onelist_dataframe(lines):
     read = Read(is_onelist=True, tgt_parent=None)
@@ -229,7 +231,13 @@ def read_onelist_dataframe(lines):
 
 def read_onelist_dataframe_from_file(path, encoding='utf-8'):
     with open(path, 'r', encoding=encoding) as f:
-        return read_onelist_dataframe(f)
+        meta =  read_onelist_meta(f)
+    with open(path, 'r', encoding=encoding) as f:
+        df = read_onelist_dataframe(f)
+    if hasattr(df, 'attrs'):
+        df.attrs.update(meta)
+    return df
+
 
 
 if __name__ == "__main__":
