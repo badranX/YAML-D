@@ -48,8 +48,8 @@ class Read():
     def _ylist_type_cast(cls, old_types, new_types):
         def c(fromto):
             from_type, to_type = fromto
-            if to_type is type(None):
-                return from_type
+            if to_type is None or from_type is None:
+                return from_type if from_type else to_type
 
             if from_type == to_type:
                 return from_type
@@ -66,7 +66,7 @@ class Read():
         ytype = cls.FIRST_CHAR2TYPES.get(value[0], False)
         if not ytype:
             if value == NaN:
-                ytype = type(None)
+                ytype = None
             else:
                 ytype = float if '.' in value else int
         return ytype
@@ -227,8 +227,8 @@ def read_onelist_dataframe(lines):
     df = pd.DataFrame(data)
     return df
 
-def read_onelist_dataframe_from_file(path):
-    with open(path, 'r') as f:
+def read_onelist_dataframe_from_file(path, encoding='utf-8'):
+    with open(path, 'r', encoding=encoding) as f:
         return read_onelist_dataframe(f)
 
 

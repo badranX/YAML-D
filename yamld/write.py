@@ -32,7 +32,7 @@ class Write():
         else:
             self.buffer += entry.parent + SEP + NL
             self.last_keys = entry.obj.keys()
-            for i, keyval in enumerate(entry.items()):
+            for i, keyval in enumerate(entry.obj.items()):
                 key, val = keyval
                 item = TAB + key + SEP  + val
                 self.buffer += item + NL
@@ -41,17 +41,15 @@ class Write():
         self.is_writing_list = entry.is_ylist
 
 
-    def write(self, path, entries, flag='w'):
-        with open(path, flag) as f:
-            for entry in entries:
-                self.write_entry(entry)
-                if len(self.buffer) > self.max_buffer_size:
-                    f.write(self.buffer)
-                    self.buffer = ""
-            f.write(self.buffer)
+    def write(self, f, entries):
+        for entry in entries:
+            self.write_entry(entry)
+            if len(self.buffer) > self.max_buffer_size:
+                f.write(self.buffer)
+                self.buffer = ""
+        f.write(self.buffer)
 
-            
-def write_dataframe(path, df, name):
+def write_dataframe(f, df, name='data'):
     itr = df.iterrows()
     itr = df.to_dict(orient="records")
     itr = map(lambda x: Entry.from_dict(parent=name, obj=x, is_ylist=True), itr)
@@ -60,7 +58,11 @@ def write_dataframe(path, df, name):
         itr = itertools.chain(Entry.dict2d_to_list(df.attrs), itr)
 
     write = Write()
-    write.write(path, itr)
+    write.write(f, itr)
+
+def write_dataframe_from_path(path, df, name='data', encoding='utf-8'):
+    with open(path, 'w', encoding=encoding) as f:
+        write_dataframe(f, df, name)
 
 
 def write_dict2d(path, dict2d):
