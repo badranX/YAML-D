@@ -22,13 +22,20 @@ def infer_repr(value):
 
 
 class Entry():
-    def __init__(self, parent=None, obj=None, ytype=None, is_ylist=None, is_parent_value=None, is_last=False):
+    OBJ_BLOCK_SEQUENCE, \
+    OBJ_DICT, \
+    OBJ_PYTHON_LITERAL, \
+    *_ = range(10)
+
+    def __init__(self, parent=None, obj=None, ytype=None, is_ylist=None, is_parent_value=None, is_block_seq=None, is_last=False):
         self.is_last = is_last
         self.parent = str(parent)
         self.obj = obj
         self.ytype = ytype
+        #node states, dict is default
         self.is_ylist = is_ylist
         self.is_parent_value = is_parent_value
+        self.is_block_seq = is_block_seq
         self.is_write_ready = False
         
     @classmethod
@@ -53,7 +60,7 @@ class Entry():
         return this
         
     @classmethod
-    def dict2d_to_list(cls, dict2d):
+    def dict2d_to_entries(cls, dict2d):
         return [cls.from_keyval(k,v) if not isinstance(v, dict) else 
                         cls.from_dict(v, parent=k, is_ylist=False)  
                         for k, v in dict2d.items()]

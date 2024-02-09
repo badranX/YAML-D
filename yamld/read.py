@@ -32,16 +32,21 @@ class Read():
         self.yaml_obj_types = dict()
         self.all_types = dict()
         self.list_counter = 0
+        self.block_seq_len = 0
+        self.is_mini_data = False
+        self.columns = {}
+        self.is_data_1straw = False
 
         #line state
         self.key = None
         self.value = None
         self.is_parent = False
         self.is_child = False
-        self.is_minus = False
-        self.is_obj_parsing_done = False
+        self.is_entry_minus = False
+        self.is_double_minus = False
+        self.is_multiline_obj_parsing_done = False
         self.is_parent_value = False
-        self.is_obj_parsing = False
+        self.is_obj_still_parsing = False
         self.is_2ndimen_parsing = False
     
     @classmethod
@@ -78,9 +83,10 @@ class Read():
                 raise Exception("You specified a one list('-') yaml2d file but a key was found after parsing the list")
             else:
                 self.current_parent = self.key
-            self.list_counter = 0
+            #TODO onelist is the default
+            #self.list_counter = 0
             
-        if self.is_obj_parsing_done:
+        if self.is_multiline_obj_parsing_done:
             self.yaml_obj = dict()
             self.yaml_obj_types = dict()
             
@@ -89,27 +95,67 @@ class Read():
     def process_line(self, line):
         striped_line = line.strip()
         if not striped_line:
-            return None
+            return True
 
         self.is_child = line[0].isspace()
         self.is_parent = not self.is_child
         line = striped_line
 
-        key, value = line.strip().split(':', 1)
-        self.key, self.value = key.strip(), value.strip()
+        keyvalue = line.strip().split(':', 1)
+        if len(keyvalue) == 1:
+            is_colon = False
+            self.key, self.value =  keyvalue[0], None
+        else:
+            #note: relying on `len(':'.split(':')) == 2`
+            is_colon = True
+            self.key, self.value = keyvalue
+            self.key, self.value = self.key.strip(), self.value.strip()
+        
         
         self.is_parent_value = self.is_parent and self.value
 
-        self.is_minus = key[0] == '-'
-        self.is_obj_parsing_done = (self.is_parent or self.is_minus) and bool(self.yaml_obj)
+        minus_counter = self.key[0] == '-'
+        if minus_counter:
+            self.key = self.key[1:].strip()
+            minus_counter +=  self.key[0] == '-'
+            if minus_counter > 1:
+                self.key = self.key[1:].strip()
+
+            
+        if minus_counter > 1:
+            self.is_mini_data = True
+            
+        self.is_double_minus = minus_counter == 2
+        self.is_entry_minus = self.is_double_minus or \
+                            (minus_counter == 1 and \
+                             not self.is_mini_data)
+
+        self.is_multiline_obj_parsing_done = (self.is_parent or self.is_entry_minus) and bool(self.yaml_obj)
+        self.list_counter += self.is_entry_minus
+        self.is_data_1straw = self.list_counter == 1
+
+        if self.is_double_minus:
+            self.block_seq_len = 0
+        if self.block_seq_len or self.is_double_minus:
+            self.block_seq_len += 1
+            if self.is_data_1straw and is_colon:
+                self.columns[self.block_seq_len - 1] = self.key
+                return True
+            else:
+                self.value = self.key
+                try:
+                    self.key = self.columns[self.block_seq_len - 1]
+                except KeyError as e:
+                    raise Exception('Probably violated fixed set of features: ' + str(e)) from e
+
         
         #states
         if self.is_child:
-            self.is_obj_parsing = True
+            self.is_obj_still_parsing = True
         if self.is_parent:
-            self.is_obj_parsing = False
+            self.is_obj_still_parsing = False
 
-        if self.is_obj_parsing:
+        if self.is_obj_still_parsing:
             self.is_2ndimen_parsing = True
         if self.is_parent:
             self.is_2ndimen_parsing = False
@@ -117,9 +163,12 @@ class Read():
         
     def parsing_obj(self):
         #record current line if not parent
-        if self.is_minus:
-            self.list_counter += 1
-            self.key = self.key[1:].strip()
+        #if self.is_data_1straw and \
+        #self.is_mini_data and \
+        #self.columns:
+        #    #was filling column names
+        #    return False
+
         self.yaml_obj[self.key] = self.value
         ytype = self.infer_type(self.value)        
         self.yaml_obj_types[self.key] = ytype
@@ -136,17 +185,18 @@ class Read():
 
     def read_generator(self, lines):
         for line in lines:
-            self.process_line(line)
-            if self.is_obj_parsing_done:
-                self.read_obj()
-                yield Entry(
-                    parent=self.current_parent,
-                    obj=self.yaml_obj,
-                    ytype=self.yaml_obj_types,
-                    is_ylist= bool(self.list_counter),
-                    is_parent_value= False,
-                    is_last=False
-                )
+            if self.process_line(line):
+                continue
+            if self.is_multiline_obj_parsing_done:
+                if self.read_obj():
+                    yield Entry(
+                        parent=self.current_parent,
+                        obj=self.yaml_obj,
+                        ytype=self.yaml_obj_types,
+                        is_ylist= bool(self.list_counter),
+                        is_parent_value= False,
+                        is_last=False
+                    )
             if self.is_parent_value:
                 yield Entry(
                     parent= self.key,
@@ -157,17 +207,17 @@ class Read():
                     is_last=False
                 )
             self._reset()
-            if self.is_obj_parsing:
+            if self.is_obj_still_parsing:
                 self.parsing_obj()
-        if self.is_obj_parsing:
-            self.read_obj()
-            yield Entry(
-                obj=self.yaml_obj,
-                ytype=self.yaml_obj_types,
-                is_ylist= bool(self.list_counter),
-                is_parent_value= False,
-                is_last=False
-            )
+        if self.is_obj_still_parsing:
+            if self.read_obj():
+                yield Entry(
+                    obj=self.yaml_obj,
+                    ytype=self.yaml_obj_types,
+                    is_ylist= bool(self.list_counter),
+                    is_parent_value= False,
+                    is_last=False
+                )
             yield Entry(is_last=True)
         
 

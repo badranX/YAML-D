@@ -11,24 +11,39 @@ class Write():
         self.buffer = ""
         self.last_keys = None
         self.max_buffer_size = 400
-        self.is_writing_list = False
+        self.is_1stentry = False
     
-    def write_entry(self, entry):
+    def write_entry(self, entry, is_mini=False):
         if entry.is_parent_value:
             self.buffer += entry.parent + SEP + entry.obj + NL
             self.buffer += NL
         elif entry.is_ylist:
-            if not self.is_writing_list and entry.parent:  
-                #parent check incase of append
+            if not self.is_1stentry and entry.parent:  
                 self.buffer += entry.parent + SEP + NL
-            for i, keyval in enumerate(entry.obj.items()):
-                key, val = keyval
-                if i == 0:
-                    key = MINUS_TAB + key
-                else:
-                    key = TAB + key
-                item = TAB + key + SEP + val
-                self.buffer += item + NL
+                if is_mini:
+                    for i, key in enumerate(entry.obj.keys()):
+                        if i==0:
+                            item = 2*MINUS_TAB + key + SEP 
+                        else:
+                            item = MINUS_TAB + key + SEP 
+                        self.buffer += TAB + item + NL
+            if is_mini:
+                for i, val in enumerate(entry.obj.values()):
+                    if i == 0:
+                        head = 2*MINUS_TAB
+                    else:
+                        head = TAB + MINUS_TAB
+                    item = TAB + head +  val
+                    self.buffer += item + NL
+            else:
+                for i, keyval in enumerate(entry.obj.items()):
+                    key, val = keyval
+                    if i == 0:
+                        key = MINUS_TAB + key
+                    else:
+                        key = TAB + key
+                    item = TAB + key + SEP + val
+                    self.buffer += item + NL
         else:
             self.buffer += entry.parent + SEP + NL
             self.last_keys = entry.obj.keys()
@@ -38,27 +53,27 @@ class Write():
                 self.buffer += item + NL
             self.buffer += NL
             
-        self.is_writing_list = entry.is_ylist
+        self.is_1stentry = entry.is_ylist
 
 
-    def write(self, f, entries):
+    def write(self, f, entries, is_mini=False):
         for entry in entries:
-            self.write_entry(entry)
+            self.write_entry(entry, is_mini=is_mini)
             if len(self.buffer) > self.max_buffer_size:
                 f.write(self.buffer)
                 self.buffer = ""
         f.write(self.buffer)
 
-def write_dataframe(f, df, name='data'):
+def write_dataframe(f, df, is_mini=False, name='data'):
     itr = df.iterrows()
     itr = df.to_dict(orient="records")
     itr = map(lambda x: Entry.from_dict(parent=name, obj=x, is_ylist=True), itr)
     
     if df.attrs:
-        itr = itertools.chain(Entry.dict2d_to_list(df.attrs), itr)
+        itr = itertools.chain(Entry.dict2d_to_entries(df.attrs), itr)
 
     write = Write()
-    write.write(f, itr)
+    write.write(f, itr, is_mini=is_mini)
 
 def write_dataframe_from_path(path, df, name='data', encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as f:
@@ -66,7 +81,7 @@ def write_dataframe_from_path(path, df, name='data', encoding='utf-8'):
 
 
 def write_dict2d(path, dict2d):
-    itr = Entry.dict2d_to_list(df.attrs)
+    itr = Entry.dict2d_to_entries(df.attrs)
     write = Write()
     write.write(path, itr)
 

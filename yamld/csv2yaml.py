@@ -12,8 +12,8 @@ def df2yaml(df, inpath, outpath=None):
         outpath = Path(outpath)
     else:
         outpath = inpath.with_suffix('.yaml')
-
-    write_dataframe(outpath, df, name='data')
+    with open(outpath, 'w') as f:
+        write_dataframe(f, df, name='data')
     print("Done writing YAML file: {}".format(outpath.name))
 
 
