@@ -1,7 +1,6 @@
 import pandas as pd
-from yamld.read import read_onelist_dataframe# Replace 'your_module' with the actual module name
+from yamld.read import read_onelist_dataframe
 
-# Sample YAML content
 yaml_content = """
 config1:
   key1: 'value1'

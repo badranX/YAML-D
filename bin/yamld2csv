@@ -1,8 +1,10 @@
+#!/usr/bin/env python
+
 import argparse
 from pathlib import Path
 import pandas as pd
 
-from .read import read_onelist_dataframe
+from yamld.read import read_onelist_dataframe
 
 
 def yaml2csv(inpath, outpath=None, encoding='utf-8'):
@@ -16,7 +18,6 @@ def yaml2csv(inpath, outpath=None, encoding='utf-8'):
     with open(inpath, 'r') as f:
         df = read_onelist_dataframe(f)
     df.to_csv(outpath, encoding=encoding, index=False)
-    print("Done writing CSV file: {}".format(outpath.name))
 
 
 def parse_arguments():

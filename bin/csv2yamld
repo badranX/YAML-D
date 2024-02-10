@@ -1,20 +1,25 @@
+#!/usr/bin/env python
+
 import pandas as pd
 import argparse
 from pathlib import Path
+import sys
 
-from .write import write_dataframe
+from yamld.write import write_dataframe
 
 
-def df2yaml(df, inpath, outpath=None):
+def df2yaml(df, inpath, outpath=None, stdout=False):
     inpath = Path(inpath)
     suffix = inpath.suffix
-    if outpath:
-        outpath = Path(outpath)
+    if stdout:
+        write_dataframe(sys.stdout, df, name='data')
     else:
-        outpath = inpath.with_suffix('.yaml')
-    with open(outpath, 'w') as f:
-        write_dataframe(f, df, name='data')
-    print("Done writing YAML file: {}".format(outpath.name))
+        if outpath:
+            outpath = Path(outpath)
+        else:
+            outpath = inpath.with_suffix('.yaml')
+        with open(outpath, 'w') as f:
+            write_dataframe(f, df, name='data')
 
 
 def parse_arguments():
@@ -24,11 +29,15 @@ def parse_arguments():
 
 
     # Optional arguments
-    parser.add_argument('-o', '--output', type=str, default=None,
-                        help='Character indicating the start of a comment line in the CSV file')
+    parser.add_argument('-o', '--output_file', type=str, default=None,
+                        help='Output YAML file name')
     parser.add_argument('-s', '--separator', type=str, default=',',
                         help='Separator used in the CSV file (default is comma)')
+    parser.add_argument("--stdout", action="store_true", help="Optional boolean argument")
 
+    parser.add_argument("-n", "--nrows", type=int, default=None, help="Max number of lines to read from the file")
+
+    parser.add_argument("--skiprows", type=int, default=None, help="Max number of lines to read from the file")
     parser.add_argument('-c', '--columns', default=None, nargs='+',
                         help='List of columns to select from the CSV file')
 
@@ -36,6 +45,8 @@ def parse_arguments():
                         help='Specify if the CSV file has a header row')
 
     parser.add_argument('--comment', type=str, default=None,
+                        help='Character indicating the start of a comment line in the CSV file')
+    parser.add_argument('-e', '--encoding', type=str, default='utf-8',
                         help='Character indicating the start of a comment line in the CSV file')
 
     return parser.parse_args()
@@ -47,9 +58,10 @@ def main():
 
     # Read CSV file using Pandas read_csv() function
     try:
-        df = pd.read_csv(args.file_path, sep=args.separator, header=0 if args.header else None,
-                         usecols=args.columns, comment=args.comment)
-        df2yaml(df, args.file_path, args.output)
+        df = pd.read_csv(args.file_path, sep=args.separator, nrows= args.nrows,
+                         skiprows= args.skiprows, header=0 if args.header else None,
+                         usecols=args.columns, comment=args.comment, encoding=args.encoding)
+        df2yaml(df, args.file_path, args.output_file, args.stdout)
     except FileNotFoundError:
         print(f"Error: File not found at {args.file_path}")
     except pd.errors.EmptyDataError:
