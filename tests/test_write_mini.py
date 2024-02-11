@@ -18,7 +18,7 @@ df.attrs['config2'] = {'keyA': 'valueA',
                        'keyB': 'valueB'}
 
 def normalize_yaml(text):
-    return os.linesep.join([s.strip() for s in text.splitlines() if s])
+    return os.linesep.join([s.rstrip() for s in text.splitlines() if s])
 
 def test_dataframe_to_yaml_mini():
     outio = io.StringIO()

@@ -25,7 +25,7 @@ class Write():
                         if i==0:
                             item = 2*MINUS_TAB + key + SEP 
                         else:
-                            item = MINUS_TAB + key + SEP 
+                            item = TAB + MINUS_TAB + key + SEP 
                         self.buffer += TAB + item + NL
             if is_mini:
                 for i, val in enumerate(entry.obj.values()):
