@@ -49,3 +49,7 @@ def test_read_onelist_dataframe():
     ]
     for i, row in enumerate(df.itertuples(index=False)):
         assert list(row) == expected_values[i]
+
+
+if __name__ == "__main__":
+  test_read_onelist_dataframe()

@@ -57,11 +57,23 @@ class Write():
 
 
     def write(self, f, entries, is_mini=False):
-        for entry in entries:
-            self.write_entry(entry, is_mini=is_mini)
-            if len(self.buffer) > self.max_buffer_size:
-                f.write(self.buffer)
-                self.buffer = ""
+        config_entry_num = 0
+        data_entry_num = 0
+        try:
+            for entry in entries:
+                data_entry_num +=  int(entry.is_ylist)
+                config_entry_num += int(not entry.is_ylist)
+                self.write_entry(entry, is_mini=is_mini)
+                if len(self.buffer) > self.max_buffer_size:
+                    f.write(self.buffer)
+                    self.buffer = ""
+        except Exception as e:
+            if data_entry_num:
+                raise type(e)("Exception! while writing the {}-th entry in the provided data:\n".format(data_entry_num) + \
+                                repr(e)) from e
+            else:
+                raise type(e)("Exception! while writing the {}-th entry in the provided meta/attrs/config data:\n".format(config_entry_num) + \
+                                repr(e)) from e
         f.write(self.buffer)
 
 def write_dataframe(f, df, is_mini=False, name='data'):

@@ -52,3 +52,6 @@ data:
 """
     outio.seek(0)
     assert normalize_yaml(outio.read()) == normalize_yaml(expected_yaml)
+    
+if __name__ == "__main__":
+  test_dataframe_to_yaml()

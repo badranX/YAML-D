@@ -1,5 +1,6 @@
 import pandas as pd
 from ast import literal_eval
+import warnings
 
 if __name__ == "__main__":
     from common import Entry, NaN
@@ -27,6 +28,7 @@ class Read():
         #init read
         self.out = None
         self.current_parent = None
+        self.prev_parent = None
         self.list_counter = 0
         self.yaml_obj = dict()
         self.yaml_obj_types = dict()
@@ -44,10 +46,9 @@ class Read():
         self.is_child = False
         self.is_entry_minus = False
         self.is_double_minus = False
-        self.is_multiline_obj_parsing_done = False
+        self.is_obj_parsing_done = False
         self.is_parent_value = False
         self.is_obj_still_parsing = False
-        self.is_2ndimen_parsing = False
     
     @classmethod
     def _ylist_type_cast(cls, old_types, new_types):
@@ -61,7 +62,8 @@ class Read():
             else:
                 new_type =  cls.LIST_CAST_TYPES.get(fromto, False)
                 if not new_type:
-                    raise Exception(f'List type error, tyring to cast {from_type} to {to_type}')
+                    raise warnings.warn(f'Unsuported mixed datatypes, tyring to cast {from_type} to {to_type}. Will default to general object type')
+                    new_type = object
                 return new_type
         
         return map(c, zip(old_types.values(), new_types.values()))
@@ -86,7 +88,7 @@ class Read():
             #TODO onelist is the default
             #self.list_counter = 0
             
-        if self.is_multiline_obj_parsing_done:
+        if self.is_obj_parsing_done:
             self.yaml_obj = dict()
             self.yaml_obj_types = dict()
             
@@ -112,15 +114,20 @@ class Read():
             self.key, self.value = self.key.strip(), self.value.strip()
         
         
-        self.is_parent_value = self.is_parent and self.value
+        if self.is_parent and not self.current_parent:
+            self.current_parent = self.key
 
-        minus_counter = self.key[0] == '-'
+        self.is_parent_value = self.is_parent and self.value
+        if self.is_parent_value:
+            self.yaml_obj = self.value
+            return False
+
+        minus_counter = int(self.key[0] == '-')
         if minus_counter:
             self.key = self.key[1:].strip()
-            minus_counter +=  self.key[0] == '-'
+            minus_counter +=  int(self.key[0] == '-')
             if minus_counter > 1:
                 self.key = self.key[1:].strip()
-
             
         if minus_counter > 1:
             self.is_mini_data = True
@@ -130,7 +137,7 @@ class Read():
                             (minus_counter == 1 and \
                              not self.is_mini_data)
 
-        self.is_multiline_obj_parsing_done = (self.is_parent or self.is_entry_minus) and bool(self.yaml_obj)
+        self.is_obj_parsing_done = (self.is_parent or self.is_entry_minus) and bool(self.yaml_obj)
         self.list_counter += self.is_entry_minus
         self.is_data_1straw = self.list_counter == 1
 
@@ -148,27 +155,14 @@ class Read():
                 except KeyError as e:
                     raise Exception('Probably violated fixed set of features: ' + str(e)) from e
 
-        
         #states
         if self.is_child:
             self.is_obj_still_parsing = True
         if self.is_parent:
             self.is_obj_still_parsing = False
-
-        if self.is_obj_still_parsing:
-            self.is_2ndimen_parsing = True
-        if self.is_parent:
-            self.is_2ndimen_parsing = False
         
         
     def parsing_obj(self):
-        #record current line if not parent
-        #if self.is_data_1straw and \
-        #self.is_mini_data and \
-        #self.columns:
-        #    #was filling column names
-        #    return False
-
         self.yaml_obj[self.key] = self.value
         ytype = self.infer_type(self.value)        
         self.yaml_obj_types[self.key] = ytype
@@ -176,36 +170,36 @@ class Read():
 
     def read_obj(self):
         if self.list_counter and self.current_parent in self.all_types:
+            #casting
             new_obj_types = self.all_types[self.current_parent]
             new_obj_types = self._ylist_type_cast(self.all_types[self.current_parent], self.yaml_obj_types)
             self.yaml_obj_types = dict(zip(self.yaml_obj_types.keys(), new_obj_types))
+        elif self.is_parent_value:
+            self.yaml_obj_types = self.infer_type(self.value),
         self.all_types[self.current_parent] = self.yaml_obj_types
         return True
 
+    def _read_line(self, line):
+        if self.process_line(line):
+            return None
+        if self.is_obj_parsing_done:
+            if self.read_obj():
+                return Entry(
+                    parent=self.current_parent,
+                    obj=self.yaml_obj,
+                    ytype=self.yaml_obj_types,
+                    is_ylist= bool(self.list_counter),
+                    is_parent_value= self.is_parent_value,
+                )
 
     def read_generator(self, lines):
+        line_num = 0
         for line in lines:
-            if self.process_line(line):
-                continue
-            if self.is_multiline_obj_parsing_done:
-                if self.read_obj():
-                    yield Entry(
-                        parent=self.current_parent,
-                        obj=self.yaml_obj,
-                        ytype=self.yaml_obj_types,
-                        is_ylist= bool(self.list_counter),
-                        is_parent_value= False,
-                        is_last=False
-                    )
-            if self.is_parent_value:
-                yield Entry(
-                    parent= self.key,
-                    obj=self.value,
-                    ytype= self.infer_type(self.value),
-                    is_parent_value= True,
-                    is_ylist=False,
-                    is_last=False
-                )
+            line_num += 1
+            output = self._read_line(line)
+            if output:
+                yield output, line_num
+
             self._reset()
             if self.is_obj_still_parsing:
                 self.parsing_obj()
@@ -215,11 +209,10 @@ class Read():
                     obj=self.yaml_obj,
                     ytype=self.yaml_obj_types,
                     is_ylist= bool(self.list_counter),
-                    is_parent_value= False,
-                    is_last=False
-                )
-            yield Entry(is_last=True)
-        
+                    is_parent_value= self.is_parent_value,
+                ), line_num
+            yield Entry(is_last=True), line_num
+
 
 def _python_eval(value):
     if value == NaN:
@@ -230,14 +223,18 @@ def _python_eval(value):
 def read_onelist_meta(lines):
     read = Read(is_onelist=True, tgt_parent=None)
     out = {}
-    for entry in read.read_generator(lines):
-        if entry.is_ylist:
-            return out
-        if entry.is_parent_value:
-            out[entry.parent] = _python_eval(entry.obj)
-        else:
-            out[entry.parent] = {k: _python_eval(v) for k, v in entry.obj.items()}
-    return out
+    try:
+        for entry, line_num in read.read_generator(lines):
+            if entry.is_ylist:
+                return out
+            if entry.is_parent_value:
+                out[entry.parent] = _python_eval(entry.obj)
+            else:
+                out[entry.parent] = {k: _python_eval(v) for k, v in entry.obj.items()}
+        return out
+    except Exception as e:
+        raise Exception("Exception was raised. Last parsed line in the provided YAML was: {} \n".format(line_num) + \
+                        + str(e)) from e
                  
 def read_onelist_meta_from_file(path):
     with open(path, 'r') as f:
@@ -246,13 +243,18 @@ def read_onelist_meta_from_file(path):
 def read_onelist_generator(lines, transform=None):
     read = Read(is_onelist=True, tgt_parent=None)
     def gen():
-        for entry in read.read_generator(lines):
-            if not entry.is_ylist:
-                continue
-            tmp = {k: _python_eval(v) for k, v in entry.obj.items()}
-            if transform:
-                tmp = transform(tmp)
-            yield tmp
+        try:
+            for entry, line_num in read.read_generator(lines):
+                if not entry.is_ylist:
+                    continue
+                tmp = {k: _python_eval(v) for k, v in entry.obj.items()}
+                if transform:
+                    tmp = transform(tmp)
+                yield tmp
+        except Exception as e:
+            raise type(e)("Exception! last parsed line was {} in the provided YAML:\n".format(line_num) + \
+                            repr(e)) from e
+                     
     return gen
 
 def read_onelist_generator_from_file(path):
@@ -275,7 +277,7 @@ def read_onelist_dataframe(lines):
                 for k, v in entrydict.items():
                     data[k].append(v)
             except KeyError as e:
-                raise Exception('Probably violated YAML (-)list must contain fixed features: ' + e.message) from e
+                raise Exception('Probably violated YAML (-)list must contain fixed features, KeyError was raised: ' + str(e)) from e
     df = pd.DataFrame(data)
     return df
 
