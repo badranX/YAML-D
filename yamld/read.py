@@ -47,7 +47,7 @@ class Read():
         self.is_entry_minus = False
         self.is_double_minus = False
         self.is_obj_parsing_done = False
-        self.is_parent_value = False
+        self.is_parent_with_value = False
         self.is_obj_still_parsing = False
     
     @classmethod
@@ -117,10 +117,7 @@ class Read():
         if self.is_parent and not self.current_parent:
             self.current_parent = self.key
 
-        self.is_parent_value = self.is_parent and self.value
-        if self.is_parent_value:
-            self.yaml_obj = self.value
-            return False
+        self.is_parent_with_value = self.is_parent and bool(self.value)
 
         minus_counter = int(self.key[0] == '-')
         if minus_counter:
@@ -174,31 +171,33 @@ class Read():
             new_obj_types = self.all_types[self.current_parent]
             new_obj_types = self._ylist_type_cast(self.all_types[self.current_parent], self.yaml_obj_types)
             self.yaml_obj_types = dict(zip(self.yaml_obj_types.keys(), new_obj_types))
-        elif self.is_parent_value:
-            self.yaml_obj_types = self.infer_type(self.value),
         self.all_types[self.current_parent] = self.yaml_obj_types
         return True
 
-    def _read_line(self, line):
-        if self.process_line(line):
-            return None
-        if self.is_obj_parsing_done:
-            if self.read_obj():
-                return Entry(
-                    parent=self.current_parent,
-                    obj=self.yaml_obj,
-                    ytype=self.yaml_obj_types,
-                    is_ylist= bool(self.list_counter),
-                    is_parent_value= self.is_parent_value,
-                )
 
     def read_generator(self, lines):
         line_num = 0
         for line in lines:
             line_num += 1
-            output = self._read_line(line)
-            if output:
-                yield output, line_num
+            if self.process_line(line):
+                continue
+            if self.is_obj_parsing_done:
+                if self.read_obj():
+                    yield Entry(
+                        parent=self.current_parent,
+                        obj=self.yaml_obj,
+                        ytype=self.yaml_obj_types,
+                        is_ylist= bool(self.list_counter),
+                        is_parent_value= False,
+                    ), line_num
+            if self.is_parent_with_value:
+                    yield Entry(
+                        parent= self.key,
+                        obj=self.value,
+                        ytype= self.infer_type(self.value),
+                        is_parent_value= True,
+                        is_ylist= False,
+                    ), line_num
 
             self._reset()
             if self.is_obj_still_parsing:
@@ -209,7 +208,7 @@ class Read():
                     obj=self.yaml_obj,
                     ytype=self.yaml_obj_types,
                     is_ylist= bool(self.list_counter),
-                    is_parent_value= self.is_parent_value,
+                    is_parent_value= self.is_parent_with_value,
                 ), line_num
             yield Entry(is_last=True), line_num
 
@@ -234,7 +233,7 @@ def read_onelist_meta(lines):
         return out
     except Exception as e:
         raise Exception("Exception was raised. Last parsed line in the provided YAML was: {} \n".format(line_num) + \
-                        + str(e)) from e
+                         str(e)) from e
                  
 def read_onelist_meta_from_file(path):
     with open(path, 'r') as f:
