@@ -11,11 +11,13 @@ data = {
 }
 
 df = pd.DataFrame(data)
+df.attrs['oneval0'] = 2
 df.attrs['config1'] = {'key1': 'value1',
                        'key2': 'value2'}
-
+df.attrs['oneval1'] = 'test'
 df.attrs['config2'] = {'keyA': 'valueA', 
                        'keyB': 'valueB'}
+df.attrs['oneval2'] = 3.4
 
 def normalize_yaml(text):
     return os.linesep.join([s.rstrip() for s in text.splitlines() if s])
@@ -28,13 +30,19 @@ def test_dataframe_to_yaml():
 
     # Test case 1: Check if the generated YAML has the correct structure
     expected_yaml = """
+
+oneval0: 2
 config1:
   key1: 'value1'
   key2: 'value2'
 
+oneval1: 'test'
+
 config2:
   keyA: 'valueA'
   keyB: 'valueB'
+
+oneval2: 3.4
 
 data:
   - name: 'Sami Aker'

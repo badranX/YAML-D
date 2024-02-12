@@ -14,11 +14,11 @@ class Write():
         self.is_1stentry = False
     
     def write_entry(self, entry, is_mini=False):
-        if entry.is_parent_value:
+        if entry.is_single_value:
             self.buffer += entry.parent + SEP + entry.obj + NL
             self.buffer += NL
         elif entry.is_ylist:
-            if not self.is_1stentry and entry.parent:  
+            if not self.is_1stentry:  
                 self.buffer += entry.parent + SEP + NL
                 if is_mini:
                     for i, key in enumerate(entry.obj.keys()):

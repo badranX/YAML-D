@@ -27,14 +27,14 @@ class Entry():
     OBJ_PYTHON_LITERAL, \
     *_ = range(10)
 
-    def __init__(self, parent=None, obj=None, ytype=None, is_ylist=None, is_parent_value=None, is_block_seq=None, is_last=False):
+    def __init__(self, parent=None, obj=None, ytype=None, is_ylist=None, is_single_value=None, is_block_seq=None, is_last=False):
         self.is_last = is_last
         self.parent = str(parent)
         self.obj = obj
         self.ytype = ytype
         #node states, dict is default
         self.is_ylist = is_ylist
-        self.is_parent_value = is_parent_value
+        self.is_single_value = is_single_value
         self.is_block_seq = is_block_seq
         self.is_write_ready = False
         
@@ -54,7 +54,7 @@ class Entry():
         this = cls()
         this.parent= key
         this.is_ylist = False
-        this.is_parent_value = True
+        this.is_single_value = True
         this.obj = infer_repr(val)
         this.is_write_ready = True
         return this

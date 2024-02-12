@@ -47,7 +47,7 @@ class Read():
         self.is_entry_minus = False
         self.is_double_minus = False
         self.is_obj_parsing_done = False
-        self.is_parent_with_value = False
+        self.is_single_value = False
         self.is_obj_still_parsing = False
     
     @classmethod
@@ -117,7 +117,7 @@ class Read():
         if self.is_parent and not self.current_parent:
             self.current_parent = self.key
 
-        self.is_parent_with_value = self.is_parent and bool(self.value)
+        self.is_single_value = self.is_parent and bool(self.value)
 
         minus_counter = int(self.key[0] == '-')
         if minus_counter:
@@ -188,14 +188,14 @@ class Read():
                         obj=self.yaml_obj,
                         ytype=self.yaml_obj_types,
                         is_ylist= bool(self.list_counter),
-                        is_parent_value= False,
+                        is_single_value= False,
                     ), line_num
-            if self.is_parent_with_value:
+            if self.is_single_value:
                     yield Entry(
                         parent= self.key,
                         obj=self.value,
                         ytype= self.infer_type(self.value),
-                        is_parent_value= True,
+                        is_single_value= True,
                         is_ylist= False,
                     ), line_num
 
@@ -208,7 +208,7 @@ class Read():
                     obj=self.yaml_obj,
                     ytype=self.yaml_obj_types,
                     is_ylist= bool(self.list_counter),
-                    is_parent_value= self.is_parent_with_value,
+                    is_single_value= False,
                 ), line_num
             yield Entry(is_last=True), line_num
 
@@ -226,7 +226,7 @@ def read_onelist_meta(lines):
         for entry, line_num in read.read_generator(lines):
             if entry.is_ylist:
                 return out
-            if entry.is_parent_value:
+            if entry.is_single_value:
                 out[entry.parent] = _python_eval(entry.obj)
             else:
                 out[entry.parent] = {k: _python_eval(v) for k, v in entry.obj.items()}

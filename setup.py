@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='yamld',
-    version='0.0.13',
+    version='0.0.14',
     author='Yahya Badran',
     author_email='techtweaking@gmail.com',
     description='parser of YAMLd, a tiny subset of YAML',
