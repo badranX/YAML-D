@@ -119,10 +119,10 @@ class Read():
 
         self.is_single_value = self.is_parent and bool(self.value)
 
-        minus_counter = int(self.key[0] == '-')
+        minus_counter = int(self.key[0:2] == '- ')
         if minus_counter:
             self.key = self.key[1:].strip()
-            minus_counter +=  int(self.key[0] == '-')
+            minus_counter +=  int(self.key[0:2] == '- ')
             if minus_counter > 1:
                 self.key = self.key[1:].strip()
             
@@ -268,13 +268,16 @@ def read_onelist_dataframe(lines):
     read = Read(is_onelist=True, tgt_parent=None)
     data = {}
     gen = read_onelist_generator(lines)
+    test = -1
     for entrydict in gen():
         if not data:
             data = {k:[v] for k,v in entrydict.items()}
+            test = len(data)
         else:
             try:
                 for k, v in entrydict.items():
                     data[k].append(v)
+                assert len(entrydict) == test
             except KeyError as e:
                 raise Exception('Probably violated YAML (-)list must contain fixed features, KeyError was raised: ' + str(e)) from e
     df = pd.DataFrame(data)

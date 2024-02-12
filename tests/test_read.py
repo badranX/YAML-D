@@ -18,7 +18,7 @@ config2:
   keyB: 'valueB'
   keyC: 'valueC'
 
-oneval_float: 3.4
+oneval_float: -3.4
 
 data:
   - name: 'John Doe'
@@ -61,7 +61,7 @@ def test_read_onelist_dataframe():
                   'keyA': 'valueA',
                   'keyB': 'valueB',
                   'keyC': 'valueC'},
-                'oneval_float': 3.4}
+                'oneval_float': -3.4}
         assert df.attrs == meta
         # Test case 5: Check if the values in the DataFrame are correct
         expected_values = [

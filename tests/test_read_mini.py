@@ -28,13 +28,13 @@ data:
     - 30
     -  'New York'
   - -  'Jane Smith'
-    - 25
+    - -25
     -  'San Francisco'
   - -  'Bob Johnson'
     - 35
     -  'Chicago'
   - -  'Test'
-    - 35.0
+    - -35.0
     -  'Chicago'
 """
 
@@ -71,9 +71,9 @@ def test_read_mini_dataframe():
         # Test case 5: Check if the values in the DataFrame are correct
         expected_values = [
             ['John Doe', 30, 'New York'],
-            ['Jane Smith', 25, 'San Francisco'],
+            ['Jane Smith', -25, 'San Francisco'],
             ['Bob Johnson', 35, 'Chicago'],
-            ['Test', 35.0, 'Chicago']
+            ['Test', -35.0, 'Chicago']
         ]
         for i, row in enumerate(df.itertuples(index=False)):
             assert list(row) == expected_values[i]
