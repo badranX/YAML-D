@@ -11,7 +11,7 @@ setup(
     url='https://github.com/badranx/YAML-2D',
     install_requires=['pandas >= 1.0.0'],
     packages=find_packages(),
-    scripts=['bin/csv2yamld', 'bin/yamld2csv'],
+    scripts=['bin/csv2yamld', 'bin/yamld2csv', 'bin/yamld'],
     license='MIT',
     classifiers = [
         "Programming Language :: Python :: 3",
