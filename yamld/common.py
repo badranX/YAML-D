@@ -22,10 +22,6 @@ def infer_repr(value):
 
 
 class Entry():
-    OBJ_BLOCK_SEQUENCE, \
-    OBJ_DICT, \
-    OBJ_PYTHON_LITERAL, \
-    *_ = range(10)
 
     def __init__(self, parent=None, obj=None, ytype=None, is_ylist=None, is_single_value=None, is_block_seq=None, is_last=False):
         self.is_last = is_last
@@ -64,4 +60,3 @@ class Entry():
         return [cls.from_keyval(k,v) if not isinstance(v, dict) else 
                         cls.from_dict(v, parent=k, is_ylist=False)  
                         for k, v in dict2d.items()]
-            
