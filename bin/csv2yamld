@@ -17,7 +17,7 @@ def df2yaml(df, inpath, outpath, is_mini, stdout=False):
         if outpath:
             outpath = Path(outpath)
         else:
-            outpath = inpath.with_suffix('.yaml')
+            outpath = inpath.with_suffix('.csv')
         with open(outpath, 'w') as f:
             write_dataframe(f, df, name='data', is_mini=is_mini)
 
