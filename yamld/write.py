@@ -87,10 +87,18 @@ def write_dataframe(f, df, is_mini=False, name='data'):
     write = Write()
     write.write(f, itr, is_mini=is_mini)
 
+def write_metadata(f, attrs):
+    itr = Entry.dict2d_to_entries(attrs)
+    write = Write()
+    write.write(f, itr)
+
 def write_dataframe_from_path(path, df, is_mini=False, name='data', encoding='utf-8'):
     with open(path, 'w', encoding=encoding) as f:
         write_dataframe(f, df, is_mini=is_mini, name=name)
 
+def write_metadata_from_path(path, attrs, encoding='utf-8'):
+    with open(path, 'w', encoding=encoding) as f:
+        write_metadata(f, attrs)
 
 def write_dict2d(path, dict2d):
     itr = Entry.dict2d_to_entries(df.attrs)
