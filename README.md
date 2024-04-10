@@ -2,6 +2,7 @@
 
 **YAMLd** is a tiny subset of *YAML* designed specifically for representing tabular data (for now, only *CSV*). It is particularly useful for datasets with numerous features or lengthy sequences that are hard to read. The **D** stands for data!
 
+> **_NOTE:_** This project might be archived soon, to be replaced by this <https://github.com/badranX/yaml-datasets>.
 ### YAMLd Rules:
 
 - The hyphen symbol (`-`) is  only used to list the dataset. Other use cases are not permited.
